@@ -1,1 +1,338 @@
 
+yum update -y
+yum install xfsprogs -y
+yum install lvm2 -y
+yum install wget curl openssl -y
+pvcreate /dev/xvdb /dev/xvdb
+vgcreate VolGroup01 /dev/xvdb
+lvcreate -L 9G -n jenkinsvol VolGroup01
+lvcreate -L 9G -n nginxvol  VolGroup01
+mkfs -t xfs  /dev/mapper/VolGroup01-jenkinsvol
+mkfs -t xfs  /dev/mapper/VolGroup01-nginxvol
+mkdir -p /jenkins
+mkdir -p /nginx
+echo '/dev/mapper/VolGroup01-jenkinsvol     /jenkins        xfs    defaults 0 0'>> /etc/fstab
+echo '/dev/mapper/VolGroup01-nginxvol       /nginx          xfs    defaults 0 0'>> /etc/fstab
+mount -a
+================================================================----------------------------------------------------------------------------------------------------
+docker ps
+docker info
+
+
+docker volume prune
+docker volume create jenkins-data
+docker volume create jenkins-log
+---------------------------------------------Dockerfile-----------------------
+FROM jenkins/jenkins:2.112
+LABEL maintainer=”mstewart@riotgames.com”
+
+USER root
+RUN mkdir /var/log/jenkins
+RUN mkdir /var/cache/jenkins
+RUN chown -R jenkins:jenkins /var/log/jenkins
+RUN chown -R jenkins:jenkins /var/cache/jenkins
+USER jenkins
+
+
+ENV JAVA_OPTS="-Xmx8192m"
+ENV JENKINS_OPTS="--handlerCountMax=300 --logfile=/var/log/jenkins/jenkins.log --webroot=/var/cache/jenkins/war"
+
+
+---------------------------------------------Dockerfile-----------------------
+----------------------docker build -t myjenkins . -------------------------------------------------------------------------------------------------------------------------------
+
+docker run -p 8080:8080 -p 50000:50000 --name=jenkins-master --mount source=jenkins-log,target=/var/log/jenkins --mount source=jenkins-data,target=/var/jenkins_home -d myjenkins
+docker exec jenkins-master  cat  /var/jenkins_home/secrets/initialAdminPassword
+docker exec jenkins-master cat /var/log/jenkins/jenkins.log
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+docker run -p 8080:8080 -p 50000:50000 --name=jenkins-master --mount source=jenkins-log,target=/var/log/jenkins -d myjenkins
+docker exec jenkins-master tail -f /var/log/jenkins/jenkins.log
+
+docker stop jenkins-master
+docker rm jenkins-master
+docker run -p 8080:8080 -p 50000:50000 --name=jenkins-master --mount source=jenkins-log,target=/var/log/jenkins  -d myjenkins
+docker exec jenkins-master cat /var/log/jenkins/jenkins.log
+
+docker exec jenkins-master ls /var/cache/jenkins/war
+
+docker run -p 8080:8080 -p 50000:50000 --name=jenkins-master --mount source=jenkins-log,target=/var/log/jenkins --mount source=jenkins-data,target=/var/jenkins_home -d myjenkins
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+docker volume create --name nexus-data
+
+docker run -d -p 8081:8081 --name nexus sonatype/nexus3
+
+docker pull sonatype/nexus3
+
+
+
+
+
+
+
+
+
+
+
+docker pull jenkins/jenkins
+docker run -p 8080:8080 --name=jenkins-master jenkins/jenkins
+docker rm jenkins-master
+docker run -p 8080:8080 --name=jenkins-master -d jenkins/jenkins
+docker stop jenkins-master
+docker rm jenkins-master
+docker run -p 8080:8080 --name=jenkins-master -d --env JAVA_OPTS="-Xmx8192m" jenkins/jenkins
+docker stop jenkins-master
+docker rm jenkins-master
+docker run -p 8080:8080 --name=jenkins-master -d --env JAVA_OPTS="-Xmx8192m" --env JENKINS_OPTS=" --handlerCountMax=300" jenkins/jenkins
+Dockerfile
+	FROM jenkins/jenkins:2.112
+	LABEL maintainer=”yourcontact@somemail.com”
+docker build -t myjenkins .
+                      docker images ::  https://hub.docker.com/r/library/jenkins/tags/
+Cloudbees offers “jenkins/jenkins” as a convenient way to get the latest version, or “jenkins/jenkins:lts” to get the most recent “Long Term Support” version
+
+docker run -p 8080:8080 --name=jenkins-master -d --env JAVA_OPTS="-Xmx192m" --env JENKINS_OPTS=" --handlerCountMax=300" myjenkins
+
+ADDING ENVIRONMENT VARIABLES TO OUR DOCKERFILE
+
+ENV JAVA_OPTS="-Xmx8192m"
+ENV JENKINS_OPTS=" --handlerCountMax=300"
+
+docker build -t myjenkins .
+
+docker stop jenkins-master
+docker rm jenkins-master
+docker run -p 8080:8080 --name=jenkins-master -d myjenkins
+
+RUNNING A BASIC COMMAND AGAINST YOUR CONTAINER
+docker exec jenkins-master ps -ef | grep java
+
+SETTING UP A LOG FOLDER
+Dockerfile
+Let’s edit our Dockerfile again. Between the “MAINTAINER” and first ENV line we’re going to add the following
+RUN mkdir /var/log/jenkins
+docker build -t myjenkins    ** Permissions error
+ARG user=jenkins
+USER root
+Before your RUN mkdir line add
+2. After your RUN mkdir line add
+RUN chown -R  jenkins:jenkins /var/log/jenkins
+3. After your RUN chown line add:
+USER jenkins
+Note that we had to also add a chown command because we want the Jenkins user to be able to write to the folder. Next, we set root and then reset Jenkins so that the Dockerfile’s behavior is preserved.
+Now build your image again:
+docker build -t myjenkins .
+ENV JENKINS_OPTS="--handlerCountMax=300 --logfile=/var/log/jenkins/jenkins.log"
+docker build -t myjenkins .
+docker stop jenkins-master
+docker rm jenkins-master
+docker run -p 8080:8080 --name=jenkins-master -d myjenkins
+With the container running we can tail the log file if everything worked
+docker exec jenkins-master tail -f /var/log/jenkins/jenkins.log
+RETRIEVE LOGS IF JENKINS CRASHES
+docker stop jenkins-master
+docker cp jenkins-master:/var/log/jenkins/jenkins.log jenkins.log
+cat jenkins.log
+CONCLUDING THOUGHTS
+
+docker run -p 8080:8080 -p 50000:50000 --name=jenkins-master --mount 
+source=jenkins-log,target=/var/log/jenkins --mount 
+​source=jenkins-data,target=/var/jenkins_home -d myjenkins
+
+
+
+
+
+      
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
+docker pull httpd:alpine
+docker pull nginx:alpine
+docker pull reverseproxy:alpine
+
+--------------------------------------------------------------------------------------------------------------------------------
+docker pull nginx
+docker run --name docker-nginx -p 8080:80 -d -v /nginx/app/html:/usr/share/nginx/html  nginx
+docker exec -it CONTAINER_ID bash
+docker cp docker-nginx:/etc/nginx/conf.d/default.conf /nginx/app/conf/default.conf
+docker cp docker-nginx:/etc/nginx/nginx.conf  /nginx/app/conf/nginx.conf
+docker run --name app-nginx --restart unless-stopped  -p 80:80 -v /nginx/app/html:/usr/share/nginx/html -v /nginx/app/conf/default.conf:/etc/nginx/conf.d/default.conf -v /nginx/app/conf/nginx.conf:/etc/nginx/nginx.conf -d nginx
+
+docker-compose  (docker-compose.yaml)
+
+version: "3"
+#nginx service
+services:
+  client:
+    image: nginx:alpine
+	network_mode: bridge
+    container_name: webserver
+    restart: unless-stopped
+    tty: true
+    ports:
+      - 8000:80
+    volumes:
+      - /nginx/app/html:/usr/share/nginx/html
+      - /nginx/app/conf/default.conf:/etc/nginx/conf.d/default.conf
+      - /nginx/app/conf/nginx.conf:/etc/nginx/nginx.conf
+
+docker-compose up --detach
+
+----------------------------------------------------------------------------------------------------------------------------------
+mkdir db-docker
+cd db-docker
+touch docker-compose.yml
+
+
+version: '3'
+
+services:
+
+  mysql-development:
+    image: mysql:8.0.17
+    environment:
+      MYSQL_ROOT_PASSWORD: helloworld
+      MYSQL_DATABASE: testapp
+    ports:
+      - "3308:3306"
+  
+  admin:    
+    image: adminer    
+    ports:      
+      - "8080:8080"   mysql-old:
+    image: mysql:5.7.27
+    environment:
+      MYSQL_ROOT_PASSWORD: helloworld
+      MYSQL_DATABASE: coolapp
+    ports:
+      - "3309:3306"
+
+docker-compose logs -f mysqldb
+
+----------------------------------------------------------------------------------------------------------------------------------
+docker pull bitnami/jenkins
+docker network create jenkins-network
+docker volume create --name jenkins_data
+docker run -d --name jenkins   -p 80:8080 -p 443:8443   --network jenkins-network   --volume jenkins_data:/bitnami/jenkins   bitnami/jenkins:latest
+
+
+
+
+sudo gpasswd -a ${USER} docker
+#docker run --name docker-nginx -p 8080:80 -e TERM=xterm -d nginx
+docker exec -it CONTAINER_ID bash
+docker inspect --format '{{ .NetworkSettings.IPAddress }}' CONTAINER_ID
+
+docker run --name docker-nginx -p 8080:80 -d -v /nginx/app/html:/usr/share/nginx/html  nginx
+
+docker cp docker-nginx:/etc/nginx/conf.d/default.conf default.confe
+docker run --name docker-nginx --restart unless-stopped  -p 80:80 -v /nginx/app/html:/usr/share/nginx/html -v /nginx/default.conf:/tc/nginx/conf.d/default.conf -d nginx
+docker port docker-nginx
+
+docker run -d -p 8000-9000:5000 training/webapp python app.py
+
+docker ps -q | xargs -n 1 docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}} {{ .Name }}' | sed 's/ \// /'
+sudo docker ps -aq | while read line;  do sudo docker inspect -f '{{.Name}} - {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $line ; done
+
+
+---------------------------------------------------------------------------------------------------------------------------
+cd /nginx
+vi Dockerfile
+FROM nginx:alpine
+COPY index.html  /usr/share/nginx/html
+
+vi index.html
+test
+docker build -t app .
+docker run --name mynginx1 -P -d nginx
+curl http://localhost:49167
+
+docker run --name mynginx2 -v /var/www:/usr/share/nginx/html:ro -v /var/nginx/conf:/etc/nginx:ro -P -d nginx
+
+docker run -p 80:80 -v $(pwd):/usr/share/nginx/html nginx
+
+docker run --name mynginx2 -v /nginx/app/html:/usr/share/nginx/html  -v /nginx/app/conf:/etc/nginx  -P -d app
+docker exec -it b86b6699714c /bin/bash
+---------------------------------------------------------------------------------------------------------------------------
+docker container run -d \
+    -p 80:8080 \
+    -v jenkins:/var/jenkins_home \
+    --name jenkins-local \
+    jenkins/jenkins:lts
+	
+	
+	docker container exec \
+    jenkins-local \
+    sh -c "cat /var/jenkins_home/secrets/initialAdminPassword"
+
+---------------------------------------------------------------------------------------------------------------------------
+cd /jenkins/proxy
+vi Dockerfile
+FROM nginx:alpine
+RUN rm /etc/nginx/conf.d/*
+COPY proxy.conf  /etc/nginx/conf.d/
+vi proxy.conf 
+server {
+listen 80;
+location / {
+  proxy_passhttp://app:
+  }
+  }
+
+cd /jenkins
+------------------------------
+docker-compose.yml
+---
+version: '2'
+services:
+   app:
+       build: app
+   proxy:
+       build: proxy 
+       ports:
+       - "80:80"
+---------------------------------
+docker-compose build
+docker-compose up
+docker-compose 	   
+
+
+----------------------------------
+docker pull jenkins
+----------------------------------
+docker pull jenkins
+docker pull nginx
+docker run -d --name jenkins --restart unless-stopped -p 8080:8080 -v $PWD/jenkins:/jenkins:z -t jenkins/jenkins
+docker run -d --name  nginx  --restart unless-stopped -p 80:80 -v $PWD/jenkins:/jenkins:z -t nginx
+
+docker run --name mynginx2 -v /var/www:/usr/share/nginx/html:ro -v /var/nginx/conf:/etc/nginx:ro -P -d nginx
+./etc/nginx/nginx.conf
+docker run -d --name nexus --restart unless-stopped -p 8081:8081 -v $PWD/jenkins:/jenkins:z -t sonatype/nexus3
+ 
+
+docker pull sonatype/nexus3
+docker run -d -p 8081:8081 -v $PWD/jenkins:/jenkins:z -t  sonatype/nexus3
+docker build --rm=true --tag=sonatype/nexus3 .=======================================
+yum list |grep java
+yum install java-1.8.0-openjdk -y
+========================================================================================================
+cd /etc/yum.repos.d/
+ls -al
+yum repolist -v  |grep  Repo-name
+
+dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+yum makecache 
+dnf -y  install docker-ce --nobest
+sudo usermod -aG docker ec2-user
+systemctl enable --now docker
+systemctl status  docker
+cd /etc/yum.repos.d/ 
+rm -rf  docker-ce.repo
+=======================================
+curl -L https://github.com/docker/compose/releases/download/1.25.0/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
+docker-compose --version
